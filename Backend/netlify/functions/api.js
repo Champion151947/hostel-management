@@ -2,51 +2,67 @@ import { Readable } from "stream";
 
 let app;
 
+function resolveHandler(mod) {
+  if (typeof mod === "function") return mod;
+  if (mod && typeof mod.default === "function") return mod.default;
+  if (mod && mod.stack) return mod;
+  return null;
+}
+
 async function getApp() {
   if (app) return app;
 
-  try {
-    const express = (await import("express")).default;
-    const cors = (await import("cors")).default;
-    await import("../../db.js");
+  const express = (await import("express")).default;
+  const cors = (await import("cors")).default;
+  await import("../../db.js").catch(() => {});
 
-    const authRoutes = (await import("../../routes/auth.js")).default;
-    if (typeof authRoutes !== "function") return { error: `authRoutes type: ${typeof authRoutes}` };
+  app = express();
+  app.use(cors());
+  app.use(express.json());
 
-    const studentRoutes = (await import("../../routes/student.js")).default;
-    if (typeof studentRoutes !== "function") return { error: `studentRoutes type: ${typeof studentRoutes}` };
+  const routesToMount = [
+    ["/api/auth", "../../routes/auth.js"],
+    ["/api/students", "../../routes/student.js"],
+    ["/api/complaints", "../../routes/complaint.js"],
+    ["/api/rooms", "../../routes/room.js"],
+    ["/api/leaves", "../../routes/leave.js"],
+    ["/api/fees", "../../routes/fee.js"],
+  ];
 
-    const complaintRoutes = (await import("../../routes/complaint.js")).default;
-    const roomRoutes = (await import("../../routes/room.js")).default;
-    const leaveRoutes = (await import("../../routes/leave.js")).default;
-    const feeRoutes = (await import("../../routes/fee.js")).default;
-
-    app = express();
-    app.use(cors());
-    app.use(express.json());
-
-    app.use("/api/auth", authRoutes);
-    app.use("/api/students", studentRoutes);
-    app.use("/api/complaints", complaintRoutes);
-    app.use("/api/rooms", roomRoutes);
-    app.use("/api/leaves", leaveRoutes);
-    app.use("/api/fees", feeRoutes);
-
-    app.get("/api", (req, res) => res.json({ message: "Hostel Management API is running..." }));
-    return app;
-  } catch (err) {
-    return { error: err.message, stack: err.stack };
+  const debugInfo = {};
+  for (const [mountPath, modulePath] of routesToMount) {
+    try {
+      const mod = await import(modulePath);
+      const handler = resolveHandler(mod.default ?? mod);
+      if (handler) {
+        let stackInfo = [];
+        if (handler.stack) {
+          for (const layer of handler.stack) {
+            if (layer.route) stackInfo.push(`${Object.keys(layer.route.methods).join(",").toUpperCase()} ${layer.route.path}`);
+            else if (layer.name) stackInfo.push(`${layer.name} middleware`);
+          }
+        }
+        debugInfo[mountPath] = { status: "mounted", routes: stackInfo.length ? stackInfo : "empty-router" };
+        app.use(mountPath, handler);
+      } else {
+        const info = { type: typeof mod.default, modKeys: Object.keys(mod) };
+        if (mod.default && mod.default.stack) info.routerRoutes = mod.default.stack.map(l => l.route?.path);
+        debugInfo[mountPath] = { status: "cannot-resolve-handler", ...info };
+      }
+    } catch (e) {
+      debugInfo[mountPath] = { status: "import-error", error: e.message };
+    }
   }
+  app.get("/api/debug", (req, res) => res.json(debugInfo));
+
+  app.get("/api", (req, res) => res.json({ message: "Hostel Management API is running..." }));
+  return app;
 }
 
 export const handler = async (event) => {
   const instance = await getApp();
-  if (instance.error) {
-    return { statusCode: 500, body: JSON.stringify({ error: instance.error, stack: instance.stack }) };
-  }
-
   const { httpMethod, headers, queryStringParameters, body, isBase64Encoded } = event;
-  const path = (event.path || "").replace("/.netlify/functions/api", "") || "/";
+  const path = (event.path || "").replace("/.netlify/functions/api", "/api") || "/api";
   const qs = new URLSearchParams(queryStringParameters || {}).toString();
   const url = path + (qs ? "?" + qs : "");
 

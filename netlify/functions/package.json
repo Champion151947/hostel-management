@@ -1,0 +1,6 @@
+{
+  "type": "commonjs",
+  "dependencies": {
+    "serverless-http": "^4.0.0"
+  }
+}

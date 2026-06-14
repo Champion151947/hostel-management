@@ -1,7 +1,11 @@
 [build]
   command = "cd frontend && npm install && npm run build"
   publish = "frontend/dist"
-  functions = "Backend/netlify/functions"
+  functions = "netlify/functions"
+
+[functions]
+  included_files = ["Backend/**"]
+
 
 [[redirects]]
   from = "/api/*"
