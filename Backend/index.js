@@ -25,6 +25,10 @@ app.get("/", (req, res) => {
   res.send("Hostel Management System API is running...");
 });
 
+app.all("*", (req, res) => {
+  res.json({ path: req.path, originalUrl: req.originalUrl, url: req.url, baseUrl: req.baseUrl });
+});
+
 if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
