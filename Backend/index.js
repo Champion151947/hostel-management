@@ -1,7 +1,5 @@
 import express from "express";
 import cors from "cors";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
 import "./db.js";
 import authRoutes from "./routes/auth.js";
 import studentRoutes from "./routes/student.js";
@@ -27,10 +25,7 @@ app.get("/", (req, res) => {
   res.send("Hostel Management System API is running...");
 });
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-if (process.argv[1] === __filename) {
+if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
