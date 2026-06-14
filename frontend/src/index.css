@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-sidebar: #1e2433;
+    --color-sidebar-hover: #2a3142;
+    --color-sidebar-active: #3b82f6;
+    --color-navbar: #f1f5f9;
+    --color-content: #f8fafc;
+    --color-card: #ffffff;
+    --color-card-border: #e2e8f0;
+    --color-input-bg: #f1f5f9;
+    --color-input-border: #cbd5e1;
+    --color-text-primary: #1e293b;
+    --color-text-secondary: #64748b;
+    --color-text-muted: #94a3b8;
+  }
+}
