@@ -31,7 +31,9 @@ const connectDB = async () => {
   return cached.conn;
 };
 
-connectDB();
+connectDB().catch((err) => {
+  console.error("Initial MongoDB connection failed:", err.message);
+});
 
 export default mongoose;
 export { connectDB };

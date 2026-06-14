@@ -6,7 +6,11 @@ let serverlessHandler;
 
 export const handler = async (event, context) => {
   if (!serverlessHandler) {
-    await connectDB();
+    try {
+      await connectDB();
+    } catch (err) {
+      console.error("MongoDB connection failed:", err.message);
+    }
     serverlessHandler = serverless(app);
   }
   return serverlessHandler(event, context);
